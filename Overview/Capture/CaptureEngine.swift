@@ -19,7 +19,7 @@ class CaptureEngine: NSObject, @unchecked Sendable {
 
     // Private State
     private let frameProcessingQueue = DispatchQueue(
-        label: "io.williampierce.Overview.VideoSampleBufferQueue"
+        label: "au.crilly.Overview.VideoSampleBufferQueue"
     )
     private var continuation: AsyncThrowingStream<CapturedFrame, Error>.Continuation?
     private var streamOutput: CaptureEngineStreamOutput?

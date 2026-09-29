@@ -56,6 +56,6 @@ Gatekeeper may block opening downloaded builds until the user explicitly allows
 them. Public distribution without that extra approval requires adding Developer
 ID signing and notarization with the maintainer's Apple credentials.
 
-Publishing these downloads does not update Sparkle's appcast. The project still
-contains the upstream Sparkle feed and public key in `Overview/Info.plist`; in-app
-updates do not track this fork's GitHub Releases. Install these releases manually.
+The app uses bundle identifier `au.crilly.Overview` and has no Apple development
+team configured. Updates are installed manually from this repository's GitHub
+Releases using **Help → View Releases**. There is no background update checker.

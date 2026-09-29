@@ -9,14 +9,12 @@
  shortcut, and filtering options.
 */
 
-import Sparkle
 import SwiftUI
 
 struct SettingsView: View {
     // Dependencies
     @ObservedObject var sourceManager: SourceManager
     @ObservedObject var settingsManager: SettingsManager
-    @ObservedObject var updateManager: UpdateManager
     @ObservedObject var windowManager: WindowManager
     @ObservedObject var layoutManager: LayoutManager
     @ObservedObject var shortcutManager: ShortcutManager
@@ -25,7 +23,6 @@ struct SettingsView: View {
     init(
         sourceManager: SourceManager,
         settingsManager: SettingsManager,
-        updateManager: UpdateManager,
         windowManager: WindowManager,
         layoutManager: LayoutManager,
         shortcutManager: ShortcutManager
@@ -33,7 +30,6 @@ struct SettingsView: View {
     ) {
         self.sourceManager = sourceManager
         self.settingsManager = settingsManager
-        self.updateManager = updateManager
         self.windowManager = windowManager
         self.layoutManager = layoutManager
         self.shortcutManager = shortcutManager
@@ -64,10 +60,6 @@ struct SettingsView: View {
             SourceSettingsTab(settingsManager: settingsManager)
                 .tabItem { Label("Sources", systemImage: "inset.filled.rectangle.badge.record") }
                 .frame(minHeight: 288, maxHeight: 504)
-
-            UpdateSettingsTab(updateManager: updateManager)
-                .tabItem { Label("Updates", systemImage: "arrow.clockwise.circle.fill") }
-                .scrollDisabled(true)
         }
         .background(.ultraThickMaterial)
         .safeAreaInset(edge: .bottom) {

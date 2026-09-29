@@ -27,7 +27,6 @@ struct OverviewApp: App {
             SettingsView(
                 sourceManager: appDelegate.sourceManager,
                 settingsManager: appDelegate.settingsManager,
-                updateManager: appDelegate.updateManager,
                 windowManager: appDelegate.windowManager,
                 layoutManager: appDelegate.layoutManager,
                 shortcutManager: appDelegate.shortcutManager
@@ -49,7 +48,6 @@ struct OverviewApp: App {
             layoutMenu
             Divider()
             settingsButton
-            supportButton
             helpMenu
             Divider()
             quitButton
@@ -90,12 +88,6 @@ struct OverviewApp: App {
                 }
                 .keyboardShortcut(",")
             }
-        }
-    }
-
-    private var supportButton: some View {
-        Button("Support Overview") {
-            openProjectSupport()
         }
     }
 
@@ -140,10 +132,10 @@ struct OverviewApp: App {
     private var helpMenu: some View {
         Menu("Help") {
             Button {
-                openDiscord()
+                openProjectHelp()
             } label: {
                 Image(systemName: "bubble.fill")
-                Text("Join Discord")
+                Text("Project Help")
             }
 
             Button {
@@ -163,7 +155,7 @@ struct OverviewApp: App {
             Divider()
 
             versionText
-            updateButton
+            releasesButton
 
             Divider()
 
@@ -186,9 +178,9 @@ struct OverviewApp: App {
         }
     }
 
-    private var updateButton: some View {
-        Button("Check for Updates...") {
-            appDelegate.updateManager.checkForUpdates()
+    private var releasesButton: some View {
+        Button("View Releases") {
+            openReleases()
         }
     }
 
@@ -214,14 +206,14 @@ struct OverviewApp: App {
 
     // MARK: - External Resource Actions
 
-    private func openDiscord() {
-        if let url = URL(string: "https://discord.gg/ekKMnejQbA") {
+    private func openProjectHelp() {
+        if let url = URL(string: "https://github.com/mrcrilly/Overview/issues") {
             NSWorkspace.shared.open(url)
         }
     }
 
     private func openBugReport() {
-        if let url = URL(string: "https://github.com/williamcpierce/Overview/issues/new?labels=bug")
+        if let url = URL(string: "https://github.com/mrcrilly/Overview/issues/new?labels=bug")
         {
             NSWorkspace.shared.open(url)
         }
@@ -229,14 +221,14 @@ struct OverviewApp: App {
 
     private func openFeatureRequest() {
         if let url = URL(
-            string: "https://github.com/williamcpierce/Overview/discussions/categories/ideas")
+            string: "https://github.com/mrcrilly/Overview/issues/new?title=Feature%20request")
         {
             NSWorkspace.shared.open(url)
         }
     }
 
-    private func openProjectSupport() {
-        if let url = URL(string: "https://williampierce.io/overview/#support") {
+    private func openReleases() {
+        if let url = URL(string: "https://github.com/mrcrilly/Overview/releases") {
             NSWorkspace.shared.open(url)
         }
     }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Set the app identifier to `au.crilly.Overview`, clear the upstream development
+  team, and use ad-hoc signing for local builds.
+- Remove the automatic updater and its settings. Add **Help → View Releases** for
+  manual updates, and direct help, bug reports, and feature requests to this fork.
+- Remove the upstream donation menu and associated project files.
 - Add GitHub Actions builds for pull requests and `main`, and publish a GitHub
   Release when a version tag is pushed, with a universal macOS DMG containing
   `Overview.app`.

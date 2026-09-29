@@ -8,10 +8,6 @@ Create live window previews for any application, and activate them efficiently w
 
 **Note: Overview is beta software. It may contain bugs or unexpected behavior. Use at your own risk.**
 
-For development updates, please join our Discord:
-
-[![Discord Banner](https://discord.com/api/guilds/1295309622445473865/widget.png?style=banner2)](https://discord.gg/ekKMnejQbA)
-
 ## Features
 
 **Live Window Previews:** Real-time window previews with configurable frame rates and automatic hiding
@@ -31,8 +27,14 @@ For development updates, please join our Discord:
 
 ## Installation
 
-1. Download the latest version from the Overview website [williampierce.io/overview/](https://williampierce.io/overview/).
+1. Download the latest DMG from [GitHub Releases](https://github.com/mrcrilly/Overview/releases).
 2. Mount the disk image and drag Overview into your Applications folder.
+
+## Updates and Help
+
+Use **Help → View Releases** to download updates from [GitHub Releases](https://github.com/mrcrilly/Overview/releases). Updates are installed manually; the app does not check for or download updates in the background.
+
+For help, bug reports, and feature requests, use [this repository’s issues](https://github.com/mrcrilly/Overview/issues).
 
 ## Usage
 
@@ -104,10 +106,6 @@ See setting menu info panels for full details
     -   Source Application Filter
         -   Source list filtering
     -   Filter mode (blocklist/allowlist)
--   Updates
-    -   Automatically check for updates
-    -   Automatically download updates
-    -   Enable beta updates
 
 ## Privacy & Security
 
@@ -119,18 +117,7 @@ Overview requires Screen Recording permission to function, but:
 
 ## Known Issues
 
-For the complete list of known issues, see [github.com/williamcpierce/Overview/issues](https://github.com/williamcpierce/Overview/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
-
-## Project Funding
-
-Support Overview's development:
-
--   [GitHub Sponsors](https://github.com/sponsors/williamcpierce) (preferred)
--   [Patreon](https://www.patreon.com/overview_app)
-
-100% of donations will be used for project expenses or reinvested in development - no profits will be distributed to any individuals.
-
-See [FUNDING.md](https://github.com/williamcpierce/Overview/blob/main/FUNDING.md) for full details.
+For the complete list of known issues, see [github.com/mrcrilly/Overview/issues](https://github.com/mrcrilly/Overview/issues)
 
 ## Development
 
@@ -145,7 +132,6 @@ See [FUNDING.md](https://github.com/williamcpierce/Overview/blob/main/FUNDING.md
 -   SwiftUI for user interface
 -   ScreenCaptureKit for window capture
 -   KeyboardShortcuts for shortcut handling
--   Sparkle for automatic updates
 
 ### Coding Standards
 

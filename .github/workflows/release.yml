@@ -77,6 +77,6 @@ jobs:
             fi
             gh release create "$RELEASE_TAG" ./*.dmg \
               --verify-tag --title "Overview $RELEASE_TAG" --generate-notes \
-              --notes 'Universal macOS build (Apple Silicon and Intel). The app is ad-hoc signed and is not Apple-notarized. Open the .dmg, then drag Overview.app to Applications. This release does not configure the in-app Sparkle update feed.' \
+              --notes 'Universal macOS build (Apple Silicon and Intel). The app is ad-hoc signed and is not Apple-notarized. Open the .dmg, then drag Overview.app to Applications. Use Help → View Releases for future updates; updates are installed manually.' \
               "${flags[@]}"
           fi

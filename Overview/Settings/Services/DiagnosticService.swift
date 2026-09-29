@@ -227,11 +227,6 @@ final class DiagnosticService {
             source: SourceSettings(
                 filterMode: Defaults[.filterMode] ? "blocklist" : "allowlist",
                 filterAppNames: Defaults[.appFilterNames]
-            ),
-            updates: UpdateSettings(
-                autoCheck: UserDefaults.standard.bool(forKey: "SUEnableAutomaticChecks"),
-                autoDownload: UserDefaults.standard.bool(forKey: "SUAutomaticallyUpdate"),
-                betaUpdates: Defaults[.enableBetaUpdates]
             )
         )
     }
@@ -492,7 +487,6 @@ struct SettingsInfo: Codable {
     let overlay: OverlaySettings
     let layout: LayoutSettings
     let source: SourceSettings
-    let updates: UpdateSettings
 }
 
 struct PreviewSettings: Codable {
@@ -540,12 +534,6 @@ struct LayoutSettings: Codable {
 struct SourceSettings: Codable {
     let filterMode: String
     let filterAppNames: [String]
-}
-
-struct UpdateSettings: Codable {
-    let autoCheck: Bool
-    let autoDownload: Bool
-    let betaUpdates: Bool
 }
 
 struct WindowStatus: Codable {
