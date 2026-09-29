@@ -40,6 +40,9 @@ final class CaptureCoordinator: ObservableObject {
     // Private State
     private var hasPermission: Bool = false
     private var activeFrameProcessingTask: Task<Void, Never>?
+    private var recoveryTask: Task<Void, Never>?
+    private var captureRequested: Bool = false
+    private var captureGeneration: UInt = 0
     private var subscriptions = Set<AnyCancellable>()
 
     init(
@@ -64,29 +67,33 @@ final class CaptureCoordinator: ObservableObject {
     }
 
     func startCapture() async throws {
-        guard !isCapturing else { return }
+        guard !captureRequested else { return }
 
         guard let source: SCWindow = selectedSource else {
             logger.error("Capture failed: No source window selected")
             throw CaptureError.noSourceSelected
         }
 
-        logger.debug("Starting capture for source window: '\(source.title ?? "Untitled")'")
+        captureRequested = true
 
-        let stream = try await captureServices.startCapture(
-            source: source,
-            engine: captureEngine,
-            frameRate: Defaults[.captureFrameRate]
-        )
-
-        await processFrames(from: stream)
-
-        isCapturing = true
-        logger.info("Capture started: '\(source.title ?? "Untitled")'")
+        do {
+            try await startCaptureStream(source: source)
+        } catch {
+            captureRequested = false
+            isCapturing = false
+            capturedFrame = nil
+            throw error
+        }
     }
 
     func stopCapture() async {
-        guard isCapturing else { return }
+        guard captureRequested || isCapturing || captureEngine.stream != nil else { return }
+
+        captureRequested = false
+        captureGeneration &+= 1
+
+        recoveryTask?.cancel()
+        recoveryTask = nil
 
         activeFrameProcessingTask?.cancel()
         activeFrameProcessingTask = nil
@@ -122,31 +129,57 @@ final class CaptureCoordinator: ObservableObject {
 
     // MARK: - Frame Processing
 
-    private func processFrames(from stream: AsyncThrowingStream<CapturedFrame, Error>) async {
+    private func startCaptureStream(source: SCWindow) async throws {
+        logger.debug("Starting capture for source window: '\(source.title ?? "Untitled")'")
+
+        let stream = try await captureServices.startCapture(
+            source: source,
+            engine: captureEngine,
+            frameRate: Defaults[.captureFrameRate]
+        )
+
+        captureGeneration &+= 1
+        let generation = captureGeneration
+
+        isCapturing = true
+        processFrames(from: stream, generation: generation)
+        logger.info("Capture started: '\(source.title ?? "Untitled")'")
+    }
+
+    private func processFrames(
+        from stream: AsyncThrowingStream<CapturedFrame, Error>,
+        generation: UInt
+    ) {
         activeFrameProcessingTask?.cancel()
 
         activeFrameProcessingTask = Task { @MainActor in
             do {
                 for try await frame in stream {
-                    if Task.isCancelled { break }
+                    guard !Task.isCancelled, generation == captureGeneration else { return }
 
                     self.capturedFrame = frame
                 }
 
-                if !Task.isCancelled {
-                    logger.debug("Stream ended normally")
-                    isCapturing = false
+                guard !Task.isCancelled, generation == captureGeneration, captureRequested else {
+                    return
                 }
 
+                logger.warning("Capture stream ended unexpectedly")
+                scheduleRecovery(reason: "stream ended")
+
             } catch let error as SCStreamError {
+                guard !Task.isCancelled, generation == captureGeneration, captureRequested else {
+                    return
+                }
                 await handleStreamError(error)
 
             } catch {
-                logger.warning("Capture ended with error: \(error.localizedDescription)")
-
-                if isCapturing {
-                    await recoverFromError()
+                guard !Task.isCancelled, generation == captureGeneration, captureRequested else {
+                    return
                 }
+
+                logger.logError(error, context: "Capture stream ended unexpectedly")
+                scheduleRecovery(reason: error.localizedDescription)
             }
         }
     }
@@ -154,29 +187,107 @@ final class CaptureCoordinator: ObservableObject {
     private func handleStreamError(_ error: SCStreamError) async {
         let errorDescription = error.localizedDescription
 
+        // `systemStoppedStream` was added to the typed API in macOS 15, but
+        // ScreenCaptureKit can report its stable raw code on earlier systems.
+        if error.code.rawValue == -3821 {
+            logger.logError(
+                error,
+                context: "System stopped capture stream (code=\(error.code.rawValue)); scheduling recovery"
+            )
+            scheduleRecovery(reason: "systemStoppedStream")
+            return
+        }
+
         if error.code.isFatal {
-            logger.logError(error, context: "Fatal stream error: \(errorDescription)")
+            logger.logError(
+                error,
+                context: "Fatal stream error: \(errorDescription) (code=\(error.code.rawValue))"
+            )
             await stopCapture()
         } else {
-            logger.warning("Recoverable stream error: \(errorDescription)")
-            await recoverFromError()
+            logger.logError(
+                error,
+                context: "Recoverable stream error: \(errorDescription) (code=\(error.code.rawValue))"
+            )
+            scheduleRecovery(reason: errorDescription)
         }
     }
 
-    private func recoverFromError() async {
-        guard isCapturing else { return }
+    private func scheduleRecovery(reason: String) {
+        guard captureRequested, recoveryTask == nil else { return }
+
+        logger.info("Scheduling capture recovery: \(reason)")
+
+        recoveryTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.recoverCapture()
+            self.recoveryTask = nil
+        }
+    }
+
+    private func recoverCapture() async {
+        guard captureRequested, let currentSource = selectedSource else { return }
 
         logger.debug("Attempting to recover from capture error")
+        let snapshot = SourceSnapshot(source: currentSource)
+        let retryDelays: [UInt64] = [1_000_000_000, 2_000_000_000, 5_000_000_000]
 
-        try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+        // The system has already stopped the stream. This releases the old engine
+        // state while deliberately retaining the last frame and public capture state,
+        // so the preview does not jump back to the source picker during recovery.
+        activeFrameProcessingTask = nil
+        await captureEngine.stopCapture()
 
-        do {
-            try await startCapture()
-            logger.info("Successfully recovered from capture error")
-        } catch {
-            logger.logError(error, context: "Failed to recover from capture error")
-            isCapturing = false
+        for (index, delay) in retryDelays.enumerated() {
+            do {
+                try await Task.sleep(nanoseconds: delay)
+            } catch {
+                return
+            }
+
+            guard captureRequested, !Task.isCancelled else { return }
+
+            do {
+                let sources = try await sourceManager.getAvailableSources()
+                guard let source = findMatchingSource(snapshot, in: sources) else {
+                    logger.warning("Capture recovery attempt \(index + 1): source not found")
+                    continue
+                }
+
+                selectedSource = source
+                try await startCaptureStream(source: source)
+                logger.info("Capture recovery succeeded on attempt \(index + 1)")
+                return
+            } catch {
+                logger.logError(error, context: "Capture recovery attempt \(index + 1) failed")
+            }
         }
+
+        logger.error("Capture recovery failed after \(retryDelays.count) attempts")
+        captureRequested = false
+        isCapturing = false
+        capturedFrame = nil
+    }
+
+    private func findMatchingSource(
+        _ snapshot: SourceSnapshot,
+        in sources: [SCWindow]
+    ) -> SCWindow? {
+        if let exactMatch = sources.first(where: { $0.windowID == snapshot.windowID }) {
+            return exactMatch
+        }
+
+        if let bundleMatch = sources.first(where: {
+            $0.owningApplication?.bundleIdentifier == snapshot.bundleIdentifier
+                && $0.title == snapshot.title
+        }) {
+            return bundleMatch
+        }
+
+        return sources.first(where: {
+            $0.owningApplication?.applicationName == snapshot.applicationName
+                && $0.title == snapshot.title
+        })
     }
 
     // MARK: - State Synchronization
@@ -231,6 +342,20 @@ enum CaptureError: LocalizedError {
     }
 }
 
+private struct SourceSnapshot {
+    let windowID: CGWindowID
+    let title: String?
+    let bundleIdentifier: String?
+    let applicationName: String?
+
+    init(source: SCWindow) {
+        windowID = source.windowID
+        title = source.title
+        bundleIdentifier = source.owningApplication?.bundleIdentifier
+        applicationName = source.owningApplication?.applicationName
+    }
+}
+
 extension SCStreamError.Code {
     var isFatal: Bool {
         switch self {
@@ -238,8 +363,7 @@ extension SCStreamError.Code {
             .noCaptureSource, .noWindowList,
             .failedApplicationConnectionInvalid,
             .failedApplicationConnectionInterrupted,
-            .failedNoMatchingApplicationContext,
-            .systemStoppedStream, .internalError:
+            .failedNoMatchingApplicationContext, .internalError:
             return true
         default:
             return false

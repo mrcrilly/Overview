@@ -85,7 +85,9 @@ extension AppLogger {
             message += " - Context: \(context)"
         }
 
-        loggers[category]?.error("\(message)")
+        // Error details are required for diagnostics. Debug and informational
+        // messages retain OSLog's default privacy behavior.
+        loggers[category]?.error("\(message, privacy: .public)")
     }
 }
 
