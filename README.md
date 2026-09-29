@@ -4,21 +4,34 @@ Create live window previews for any application, and activate them efficiently w
 
 ![Example Screenshot](https://downloads.williampierce.io/Banner.jpg)
 
+Perfect for multi boxing in EVE Online on macOS!! 
+
+## Forked
+
+(Forked from https://github.com/williamcpierce/Overview)
+
+I forked this repository because the developer has gone radio silent. There was a critical that I used AI to fix:
+
+> A system interruption could stop a live window preview without capture resuming
+> automatically. The coordinator treated ScreenCaptureKit's `systemStoppedStream`
+> error as fatal, stopping capture and clearing the preview. Other recoverable errors
+> attempted to restart through `startCapture()`, but its `isCapturing` guard could
+> return immediately while the old capture state was still active. A stream ending
+> without an error also stopped capture without attempting recovery.
+
+Hence the need to fork and rebuild a new DMG for macOS. 
+
 ## Beta Release
 
 **Note: Overview is beta software. It may contain bugs or unexpected behavior. Use at your own risk.**
 
 ## Features
 
-**Live Window Previews:** Real-time window previews with configurable frame rates and automatic hiding
-
-**Quick Application Switching:** Switch applications through preview clicks or keyboard shortcuts
-
-**Preview Customization:** Customize preview window appearance, visibility, and saving/restoration options
-
-**Glanceable Info Overlays:** Display source app names, window titles, and focus status at a glance
-
-**Saved Preview Layouts:** Save and restore collections of preconfigured preview windows
+- **Live Window Previews:** Real-time window previews with configurable frame rates and automatic hiding
+- **Quick Application Switching:** Switch applications through preview clicks or keyboard shortcuts
+- **Preview Customization:** Customize preview window appearance, visibility, and saving/restoration options
+- **Glanceable Info Overlays:** Display source app names, window titles, and focus status at a glance
+- **Saved Preview Layouts:** Save and restore collections of preconfigured preview windows
 
 ## System Requirements
 
@@ -27,8 +40,9 @@ Create live window previews for any application, and activate them efficiently w
 
 ## Installation
 
-1. Download the latest DMG from [GitHub Releases](https://github.com/mrcrilly/Overview/releases).
+1. Download the latest version from the Releases panel here on GitHub.
 2. Mount the disk image and drag Overview into your Applications folder.
+3. Run the application.
 
 ## Updates and Help
 
@@ -115,10 +129,6 @@ Overview requires Screen Recording permission to function, but:
 -   Does not store or transmit window content
 -   All operations remain local to the device
 
-## Known Issues
-
-For the complete list of known issues, see [github.com/mrcrilly/Overview/issues](https://github.com/mrcrilly/Overview/issues)
-
 ## Development
 
 ### Technical Requirements
@@ -144,7 +154,7 @@ The project adheres to a style guide (see [STYLE.md](https://github.com/williamc
 
 ## License
 
-This project is MIT licensed (see [LICENSE.md](https://github.com/williamcpierce/Overview/blob/main/LICENSE.md))
+This project is MIT licensed (see [LICENSE.md](https://github.com/mrcrilly/Overview/blob/main/LICENSE.md))
 
 ## Acknowledgments
 
