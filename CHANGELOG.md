@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add GitHub Actions builds for pull requests and `main`, and publish a GitHub
+  Release when a version tag is pushed, with a universal macOS DMG containing
+  `Overview.app`.
+- Add a reusable build and packaging script and release instructions in
+  `docs/RELEASING.md`. Builds use ad-hoc signing without Apple credentials.
+
 ## 2026-09-29 — Recover capture streams after system interruption
 
 Commit: `216834d8b1052be13f4261b56e03972385d41d21`
