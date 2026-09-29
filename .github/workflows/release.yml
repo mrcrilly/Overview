@@ -7,35 +7,73 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Publish a release (e.g. v1.2.4); leave blank to build only'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: macos-release-${{ github.ref }}
+  group: macos-release-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: macos-15
     timeout-minutes: 45
+    outputs:
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      commit: ${{ steps.version.outputs.commit }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Select build version
+        id: version
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          release_tag="$REQUESTED_TAG"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            if [[ -n "$release_tag" && "$release_tag" != "$GITHUB_REF_NAME" ]]; then
+              echo '::error::The release tag must match the selected tag.'
+              exit 1
+            fi
+            release_tag="$GITHUB_REF_NAME"
+          fi
+          if [[ -n "$release_tag" ]]; then
+            if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+([.-][A-Za-z0-9]+)*)?$ ]]; then
+              echo '::error::Use a release tag such as v1.2.4 or v1.2.4-beta.1.'
+              exit 1
+            fi
+            if git show-ref --verify --quiet "refs/tags/$release_tag"; then
+              test "$(git rev-parse "refs/tags/$release_tag^{commit}")" = "$(git rev-parse HEAD)" || {
+                echo '::error::That tag points to a different commit. Select that tag or use a new version.'
+                exit 1
+              }
+            fi
+            version="$release_tag"
+            echo "Release requested: $release_tag" >> "$GITHUB_STEP_SUMMARY"
+          else
+            version="v0.0.0-ci.${GITHUB_RUN_NUMBER}"
+            echo 'Build only: download the DMG from Artifacts. To publish, run this workflow with a release tag or push a version tag.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build universal app and disk image
         env:
           BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            version="$GITHUB_REF_NAME"
-          else
-            version="v0.0.0-ci.${GITHUB_RUN_NUMBER}"
-          fi
-          bash scripts/build-release.sh "$version"
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/build-release.sh "$BUILD_VERSION"
 
       - name: Save DMG
         uses: actions/upload-artifact@v7
@@ -47,13 +85,19 @@ jobs:
           retention-days: 14
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
+    if: needs.build.outputs.release_tag != '' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
       - uses: actions/download-artifact@v8
         with:
           name: Overview-macOS
@@ -63,9 +107,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.commit }}
         shell: bash
         run: |
+          # Recheck after the build in case the tag was created or moved meanwhile.
+          tag_flags=(--target "$RELEASE_COMMIT")
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_COMMIT" || {
+              echo '::error::The release tag does not point to the built commit.'
+              exit 1
+            }
+            tag_flags=(--verify-tag)
+          fi
           cd release
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             # A retry replaces assets without changing existing release notes.
@@ -76,7 +130,7 @@ jobs:
               flags+=(--prerelease)
             fi
             gh release create "$RELEASE_TAG" ./*.dmg \
-              --verify-tag --title "Overview $RELEASE_TAG" --generate-notes \
+              "${tag_flags[@]}" --title "Overview $RELEASE_TAG" --generate-notes \
               --notes 'Universal macOS build (Apple Silicon and Intel). The app is ad-hoc signed and is not Apple-notarized. Open the .dmg, then drag Overview.app to Applications. Use Help → View Releases for future updates; updates are installed manually.' \
               "${flags[@]}"
           fi

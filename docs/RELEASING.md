@@ -7,6 +7,14 @@ Swift packages use the versions in the committed `Package.resolved` file.
 
 ## Publish a release
 
+From GitHub, open **Actions → Build and release macOS app → Run workflow**,
+select the branch to release, and enter a version such as `v1.2.4` in
+**release_tag**. The workflow builds that commit and publishes its DMG, creating
+the tag at the built commit if it does not already exist. An existing tag must
+point to the selected commit; otherwise select that tag or choose a new version.
+
+Alternatively, publish by pushing a tag:
+
 1. Push the workflow and the changes you want to release to GitHub.
 2. Create and push a version tag on that commit, for example:
 
@@ -35,9 +43,14 @@ Actions must be enabled for the repository, including when using a fork.
 
 Pull requests and pushes to `main` build and package the app, with downloadable
 artifacts retained for 14 days. They do not create releases. **Run workflow** on a
-branch also builds without publishing; dispatching on an existing version tag
-publishes that tag. Branch builds use the placeholder version `0.0.0` and include
+branch with **release_tag** left blank also builds without publishing; dispatching
+on an existing version tag publishes that tag. Build-only runs use the placeholder
+version `0.0.0` and include
 the run number in their filenames.
+
+If the release job says **Skipped**, the run did not request a release. Download
+the DMG from that run's **Artifacts**, or start a new run with **release_tag** filled
+in. Rerunning a previous build-only run keeps its original inputs.
 
 To run the same build and packaging process locally with Xcode installed:
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Allow manual workflow runs to publish a release by entering a version tag,
+  creating new tags at the exact built commit. Explain build-only runs in the
+  workflow summary so skipped release jobs are clear.
 - Set the app identifier to `au.crilly.Overview`, clear the upstream development
   team, and use ad-hoc signing for local builds.
 - Remove the automatic updater and its settings. Add **Help → View Releases** for
